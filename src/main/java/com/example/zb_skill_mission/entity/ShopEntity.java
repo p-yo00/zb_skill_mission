@@ -34,7 +34,6 @@ public class ShopEntity {
     private long starPointSum;
     private long starPointCnt;
     private float starPoint;
-    private int version;
 
     public static ShopEntity ToEntity(Shop.Add shop, UserEntity owner) {
         return ShopEntity.builder()
