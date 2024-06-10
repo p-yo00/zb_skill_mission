@@ -3,7 +3,6 @@ package com.example.zb_skill_mission.controller;
 import com.example.zb_skill_mission.model.LoginUser;
 import com.example.zb_skill_mission.model.Reservation;
 import com.example.zb_skill_mission.service.ReservationService;
-import com.example.zb_skill_mission.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ReservationController {
     private final ReservationService reservationService;
-    private final UserService userService;
 
     /**
      * 사용자가 매장에 예약한다.

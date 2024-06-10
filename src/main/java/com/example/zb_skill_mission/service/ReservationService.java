@@ -3,7 +3,11 @@ package com.example.zb_skill_mission.service;
 import com.example.zb_skill_mission.entity.ReservationEntity;
 import com.example.zb_skill_mission.entity.ShopEntity;
 import com.example.zb_skill_mission.entity.UserEntity;
+import com.example.zb_skill_mission.exception.ReservationException;
+import com.example.zb_skill_mission.exception.ShopException;
+import com.example.zb_skill_mission.exception.UserException;
 import com.example.zb_skill_mission.model.Reservation;
+import com.example.zb_skill_mission.model.constant.ErrorCode;
 import com.example.zb_skill_mission.model.constant.ReservationStatus;
 import com.example.zb_skill_mission.repository.ReservationRepository;
 import com.example.zb_skill_mission.repository.ShopRepository;
@@ -23,28 +27,28 @@ public class ReservationService {
     private final ShopRepository shopRepository;
 
     /**
-     *  사용자가 매장 예약을 신청한다.
+     * 사용자가 매장 예약을 신청한다.
      */
     public Reservation.Id reserve(Reservation.Reserve reservation) {
 
         UserEntity user = userRepository.findById(reservation.getUserId())
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 사용자"));
+                .orElseThrow(() -> new UserException(ErrorCode.NOT_EXIST_USER));
 
         ShopEntity shop = shopRepository.findById(reservation.getShopId())
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 매장"));
+                .orElseThrow(() -> new ShopException(ErrorCode.NOT_EXIST_SHOP));
 
         if (reservation.getBookDatetime().isBefore(LocalDateTime.now().plusMinutes(10))) {
-            throw new RuntimeException("10분 이후 시간으로 예약해야 합니다.");
+            throw new ReservationException(ErrorCode.INVALID_TIME);
         }
         if (reservationRepository.existsByBookDatetimeAndShopAndStatus(
-                        reservation.getBookDatetime(), shop, ReservationStatus.ACCEPT)) {
-            throw new RuntimeException("이미 존재하는 시간대");
+                reservation.getBookDatetime(), shop,
+                ReservationStatus.ACCEPT)) {
+            throw new ReservationException(ErrorCode.ALREADY_EXIST_TIME);
         }
 
         ReservationEntity savedReservation =
                 reservationRepository.save(ReservationEntity.toNewEntity(
-                        user, shop, reservation.getBookDatetime()
-                ));
+                        user, shop, reservation.getBookDatetime()));
 
         return new Reservation.Id(savedReservation.getId());
     }
@@ -55,17 +59,19 @@ public class ReservationService {
     public void confirm(Long userId, Long reservationId) {
         ReservationEntity updateEntity =
                 reservationRepository.findById(reservationId)
-                        .orElseThrow(()->new RuntimeException("존재하지 않는 예약 번호"));
+                        .orElseThrow(() -> new ReservationException(
+                                ErrorCode.NOT_EXIST_RESERVATION));
 
         if (!updateEntity.getUser().getId().equals(userId)) {
-            throw new RuntimeException("예약 접근 권한이 없습니다.");
+            throw new ReservationException(ErrorCode.NOT_AUTHORIZED);
         }
-        if (updateEntity.getStatus()!=ReservationStatus.ACCEPT) {
-            throw new RuntimeException("거절된 예약입니다.");
+        if (updateEntity.getStatus() != ReservationStatus.ACCEPT) {
+            throw new ReservationException(ErrorCode.REJECTED_RESERVATION);
         }
 
         if (updateEntity.getBookDatetime().isBefore(LocalDateTime.now().plusMinutes(10))) {
-            throw new RuntimeException("방문 가능 시간이 지났습니다.");
+            throw new ReservationException(ErrorCode.INVALID_TIME,
+                    "예약 10분 전 이후에는 확정이 불가합니다.");
         }
         updateEntity.setConfirmed(true);
         reservationRepository.save(updateEntity);
@@ -77,10 +83,10 @@ public class ReservationService {
     public void accept(Reservation.Accept accept) {
         ReservationEntity entity =
                 reservationRepository.findById(accept.getReservationId())
-                        .orElseThrow(()->new RuntimeException("존재하지 않는 예약 번호"));
+                        .orElseThrow(() -> new ReservationException(ErrorCode.NOT_EXIST_RESERVATION));
 
         if (!entity.getShop().getUser().getId().equals(accept.getUserId())) {
-            throw new RuntimeException("예약 접근 권한이 없습니다.");
+            throw new ReservationException(ErrorCode.NOT_AUTHORIZED);
         }
 
         if (accept.isAccept()) { // accept가 true면 ACCEPT, 아니면 DENIED

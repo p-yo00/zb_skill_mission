@@ -12,9 +12,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    @ExceptionHandler(ReservationException.class)
-    public ResponseEntity<?> handle() {
-        return ResponseEntity.ok(null);
+    @ExceptionHandler(CustomException.class)
+    public ResponseEntity<String> handleCustomException(CustomException e) {
+        return new ResponseEntity<>(e.getErrorCode().getDescription(),
+                e.getErrorCode().getHttpStatus());
     }
 
     // @Valid 검증에서 실패했을 때, 유효성 검증 조건에 대한 메시지를 리턴한다.

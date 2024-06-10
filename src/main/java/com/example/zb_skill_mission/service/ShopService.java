@@ -2,7 +2,10 @@ package com.example.zb_skill_mission.service;
 
 import com.example.zb_skill_mission.entity.ShopEntity;
 import com.example.zb_skill_mission.entity.UserEntity;
+import com.example.zb_skill_mission.exception.ShopException;
+import com.example.zb_skill_mission.exception.UserException;
 import com.example.zb_skill_mission.model.Shop;
+import com.example.zb_skill_mission.model.constant.ErrorCode;
 import com.example.zb_skill_mission.model.constant.Order;
 import com.example.zb_skill_mission.repository.ShopRepository;
 import com.example.zb_skill_mission.repository.UserRepository;
@@ -27,7 +30,7 @@ public class ShopService {
      */
     public Shop.Id addShop(Shop.Add shop) {
         UserEntity owner = userRepository.findById(shop.getUserId())
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 사용자"));
+                .orElseThrow(() -> new UserException(ErrorCode.NOT_EXIST_USER));
 
         ShopEntity savedShop = shopRepository.save(ShopEntity.ToEntity(shop,
                 owner));
@@ -40,10 +43,11 @@ public class ShopService {
      */
     public Shop.Id modifyShop(Shop.Modify shop) {
         ShopEntity updatedShop = shopRepository.findById(shop.getId())
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 매장"));
+                .orElseThrow(() -> new ShopException(ErrorCode.NOT_EXIST_SHOP));
 
-        if (!updatedShop.getUser().getId().equals(shop.getId())) {
-            throw new RuntimeException("권한이 없습니다.");
+        if (!updatedShop.getUser().getId().equals(shop.getUserId())) {
+            throw new ShopException(ErrorCode.NOT_AUTHORIZED, "매장 접근 권한이 없습니다" +
+                    ".");
         }
 
         updatedShop.updateEntity(shop);
@@ -57,10 +61,11 @@ public class ShopService {
      */
     public Shop.Id deleteShop(Long userId, Long shopId) {
         ShopEntity deleteShop = shopRepository.findById(shopId)
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 매장"));
+                .orElseThrow(() -> new ShopException(ErrorCode.NOT_EXIST_SHOP));
 
         if (!deleteShop.getUser().getId().equals(userId)) {
-            throw new RuntimeException("권한이 없습니다.");
+            throw new ShopException(ErrorCode.NOT_AUTHORIZED, "매장 접근 권한이 없습니다" +
+                    ".");
         }
 
         shopRepository.deleteById(shopId);
@@ -73,7 +78,7 @@ public class ShopService {
      */
     public Shop.GetDetail getShop(Long shopId) {
         ShopEntity findShop = shopRepository.findById(shopId)
-                .orElseThrow(() -> new RuntimeException("없는 매장입니다"));
+                .orElseThrow(() -> new ShopException(ErrorCode.NOT_EXIST_SHOP));
 
         return Shop.GetDetail.toShopDetail(findShop);
     }
@@ -91,6 +96,8 @@ public class ShopService {
         } else if (order == Order.STAR) {
             result = shopRepository.findAllByOrderByStarPointDesc(pageable);
         } else if (order == Order.DISTANCE) {
+            if (lat == null || lnt == null)
+                throw new ShopException(ErrorCode.REQUIRE_PARAMETER);
             result = shopRepository.findAllByOrderByDistance(lat, lnt,
                     pageable);
         } else {

@@ -3,7 +3,10 @@ package com.example.zb_skill_mission.service;
 import com.example.zb_skill_mission.entity.ReservationEntity;
 import com.example.zb_skill_mission.entity.ReviewEntity;
 import com.example.zb_skill_mission.entity.ShopEntity;
+import com.example.zb_skill_mission.exception.ReservationException;
+import com.example.zb_skill_mission.exception.ReviewException;
 import com.example.zb_skill_mission.model.Review;
+import com.example.zb_skill_mission.model.constant.ErrorCode;
 import com.example.zb_skill_mission.repository.ReservationRepository;
 import com.example.zb_skill_mission.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,16 +30,16 @@ public class ReviewService {
         // reservation 검증
         ReservationEntity reservation =
                 reservationRepository.findById(review.getReservationId())
-                        .orElseThrow(() -> new RuntimeException("존재하지 않은 예약"));
+                        .orElseThrow(() -> new ReservationException(ErrorCode.NOT_EXIST_RESERVATION));
 
         if (!reservation.getUser().getId().equals(review.getUserId())) {
-            throw new RuntimeException("접근 권한이 없습니다.");
+            throw new ReservationException(ErrorCode.NOT_AUTHORIZED);
         }
         if (!reservation.isConfirmed()) {
-            throw new RuntimeException("확정되지 않았던 예약");
+            throw new ReservationException(ErrorCode.NOT_CONFIRMED_RESERVATION);
         }
         if (reviewRepository.existsByReservation(reservation)) {
-            throw new RuntimeException("이미 작성한 리뷰");
+            throw new ReviewException(ErrorCode.ALREADY_WRITE_REVIEW);
         }
         // 리뷰를 db에 추가
         ReviewEntity savedReview =
@@ -59,10 +62,11 @@ public class ReviewService {
     public Review.Id editReview(Review.Edit editReview) {
         ReviewEntity originalReview =
                 reviewRepository.findById(editReview.getReviewId())
-                        .orElseThrow(() -> new RuntimeException("존재하지 않는 리뷰"));
+                        .orElseThrow(() -> new ReviewException(ErrorCode.NOT_EXIST_REVIEW));
 
         if (!originalReview.getReservation().getUser().getId().equals(editReview.getUserId())) {
-            throw new RuntimeException("접근 권한이 없습니다.");
+            throw new ReviewException(ErrorCode.NOT_AUTHORIZED, "리뷰 접근 권한이 " +
+                    "없습니다.");
         }
 
         // 매장의 평균 별점 수정
@@ -92,7 +96,8 @@ public class ReviewService {
         // 리뷰를 작성한 사용자 또는 해당 매장 주인이 아니면 삭제 불가
         if (!reservation.getUser().getId().equals(userId)
                 || !reservation.getShop().getUser().getId().equals(userId)) {
-            throw new RuntimeException("접근 권한이 없습니다.");
+            throw new ReviewException(ErrorCode.NOT_AUTHORIZED, "리뷰 접근 권한이 " +
+                    "없습니다.");
         }
 
         // 매장 별점에서 제외

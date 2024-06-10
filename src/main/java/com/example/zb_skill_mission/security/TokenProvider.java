@@ -32,7 +32,7 @@ public class TokenProvider {
 
         return Jwts.builder()
                 .header()
-                    .add(KEY_ROLES, roles)
+                .add(KEY_ROLES, roles)
                 .and()
                 .subject(username)
                 .issuedAt(now)
@@ -46,7 +46,7 @@ public class TokenProvider {
     public UserAuth getAuthentication(String jwt) {
         UserEntity userEntity =
                 userService.loadUserByUsername(getUsername(jwt));
-        log.info("UserDetails::"+userEntity);
+        log.info("UserDetails::" + userEntity);
 
         return new UserAuth(new UsernamePasswordAuthenticationToken(
                 userEntity, "", userEntity.getAuthorities()),

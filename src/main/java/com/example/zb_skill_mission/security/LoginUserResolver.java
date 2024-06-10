@@ -21,6 +21,7 @@ public class LoginUserResolver implements HandlerMethodArgumentResolver {
                                   ModelAndViewContainer mavContainer,
                                   NativeWebRequest webRequest,
                                   WebDataBinderFactory binderFactory) {
-        return webRequest.getAttribute("userId", RequestAttributes.SCOPE_REQUEST);
+        return webRequest.getAttribute("userId",
+                RequestAttributes.SCOPE_REQUEST);
     }
 }
